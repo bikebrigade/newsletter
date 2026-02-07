@@ -11,7 +11,7 @@ const sharp = require('sharp');
 const USE_CACHE = true;
 
 const DRIVE_ID = process.env.DRIVE_ID;
-const MAILCHIMP_API_KEY = process.env.MAILCHIMP_KEY || 'YOUR_MAILCHIMP_API_KEY';
+const MAILCHIMP_API_KEY = process.env.MAILCHIMP_KEY;
 const MAILCHIMP_HEADER = 'Basic ' + Buffer.from('anystring:' + MAILCHIMP_API_KEY).toString('base64');
 const MAILCHIMP_SERVER = process.env.MAILCHIMP_SERVER || 'us1';
 const BRIGADE_PREVIEW = process.env.BRIGADE_PREVIEW;
