@@ -560,7 +560,7 @@ function myBrigadeSimplifyHtml($, elem) {
     elem.find(tag).each((i, node) => {
       const converted = myBrigadeConvertSpanStyle(node, rules, $);
       if (!converted) {
-        $(node).removeAttr('style');
+        if ($(node).attr('style') != 'font-weight:700') { $(node).removeAttr('style'); }
         $(node).removeAttr('class');
         $(node).removeAttr('id');
       }
