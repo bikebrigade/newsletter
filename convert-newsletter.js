@@ -727,7 +727,7 @@ function myHtmlGroupByTag($, nodes, tag) {
 function myBrigadeTocItems($, nodes) {
   const groups = myHtmlGroupByTag($, $(nodes), 'h2');
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const dateRegex = new RegExp(`^(${dayNames.join('|')})\\s+([A-Za-z]+\\s+[0-9]+)`);
+  const dateRegex = new RegExp(`^(${dayNames.join('|')})\\s+([A-Za-z]+\\s+[0-9-]+)`);
 
   return groups.map(group => {
     const sectionName = group.section;
@@ -934,7 +934,7 @@ async function myBrigadeSchedule() {
       await mailchimpRequest(`/campaigns/${campaignId}/actions/schedule`, 'POST', {
         schedule_time: date
       });
-      console.log(`Scheduled campaign ${campaignId} for ${scheduleTime}`);
+      console.log(`Scheduled campaign ${campaignId} for ${date}`);
     } catch (err) {
       const errorMsg = err.response ? JSON.stringify(err.response.data) : err.message;
       console.error(`Failed to schedule campaign: ${errorMsg}`);
