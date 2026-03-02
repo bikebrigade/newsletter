@@ -1013,6 +1013,33 @@ async function updateCampaignHTML(campaign, output) {
   return mailchimpRequest(`/campaigns/${campaign.id}/content`);
 }
 
+async function myBrigadeSendTest() {
+  const emailList = JSON.parse(fs.readFileSync('emails.json'));
+  const campaign = await nextCampaign();
+  if (!campaign) return;
+  const rawHtml = fs.readFileSync(getHTMLFilename(TEMP_DIR));
+  const $ = cheerio.load(rawHtml, { decodeEntities: true });
+  const sectionsRaw = myHtmlGroupByTag($, $('body').children(), 'h1');
+  const meta = sectionsRaw.find(o => o.section == 'Meta');
+  let emails = emailList['default'];
+  for (let row of Object.entries(emailList)) {
+    if (row[0] == 'default') continue;
+    const match = meta.children.find((o) => {
+      return $(o).html().match(row[0]);
+    });
+    if (match) {
+      emails = emails.concat(row[1]);
+      break;
+    }
+  }
+  const res = await mailchimpRequest(`/campaigns/${campaign.id}/actions/test`, 'POST', {
+    test_emails: emails,
+    send_type: 'html'
+  });
+  console.log('Sent to: ', emails);
+}
+
+
 async function main() {
   if (process.argv[2] == 'sketch' || process.argv[2] == 'copy') {
     await maybeCreateNewsletterPad();
@@ -1032,6 +1059,8 @@ async function main() {
     await processNewsletterHTML(await nextCampaign());
   } else if (process.argv[2] == 'schedule') {
     await myBrigadeSchedule();
+  } else if (process.argv[2] == 'test') {
+    await myBrigadeSendTest();
   } else {
     await myBrigadeCreateOrUpdateCampaign();
   }
