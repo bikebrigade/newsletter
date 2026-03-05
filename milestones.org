@@ -1,0 +1,128 @@
+* Milestone extraction
+     :PROPERTIES:
+     :ID:       20251002T091357.892055
+     :END:
+
+It's easier to type in the dates in Mozilla Firefox.
+
+https://dispatch.bikebrigade.ca/leaderboard
+
+#+NAME: milestone-params
+#+begin_src js  :spookfox t :results silent
+window.startOfMonth = '2026-02-01';
+window.endOfMonth = '2026-02-28';
+window.dayBeforeMonth = '2026-01-31';
+#+end_src
+
+#+CALL: milestone-this-month-set()
+#+CALL: milestone-this-month-get()
+#+CALL: milestone-before-month-set()
+#+CALL: milestone-before-month-get()
+#+CALL: milestone-after-month-set()
+#+CALL: milestone-after-month-get()
+#+CALL: milestone-summary()
+
+
+#+NAME: milestone-this-month-set
+#+begin_src js :spookfox t :results silent :noweb yes
+<<milestone-params>>
+document.querySelector('#options_period_select').click()
+document.querySelector('#options_start_date').value = startOfMonth;
+document.querySelector('#options_end_date').value = endOfMonth;
+document.querySelector('form[phx-change="update_options"]').dispatchEvent(new Event('submit', {bubbles: true, cancelable:true}))
+#+end_src
+
+#+NAME: milestone-this-month-get
+#+begin_src js :spookfox t :results silent :noweb yes
+thisMonth = [];
+[...document.querySelectorAll('#leaderboard tbody tr')].forEach(o => {
+  const td = o.querySelectorAll('td');
+  thisMonth.push({ name: td[0].textContent.trim(), campaigns: parseInt(td[1].textContent.trim()), deliveries: parseInt(td[2].textContent.trim()) });
+});
+riders = thisMonth.length;
+deliveries = thisMonth.reduce((prev, val) => prev + val.deliveries, 0);
+campaigns = thisMonth.reduce((prev, val) => prev + val.campaigns, 0);
+console.log(`${riders} riders made ${deliveries} deliveries.`);
+window.thisMonthSummary = `${riders} riders made ${deliveries} deliveries.`;
+#+end_src
+
+#+NAME: milestone-before-month-set
+#+begin_src js :spookfox t :results silent :noweb yes
+<<milestone-params>>
+document.querySelector('#options_start_date').value = '2020-01-01';
+document.querySelector('#options_end_date').value = dayBeforeMonth;
+document.querySelector('form[phx-change="update_options"]').dispatchEvent(new Event('submit', {bubbles: true, cancelable:true}))
+#+end_src
+
+#+NAME: milestone-before-month-get
+#+begin_src js :spookfox t :results silent :noweb yes
+<<milestone-params>>
+if (typeof window.entries != 'undefined') {
+  window.oldEntries = window.entries;
+}
+window.entries = [];
+[...document.querySelectorAll('#leaderboard tbody tr')].forEach(o => {
+  const td = o.querySelectorAll('td');
+  window.entries.push({ name: td[0].textContent.trim(), campaigns: parseInt(td[1].textContent.trim()), deliveries: parseInt(td[2].textContent.trim()) });
+});
+console.log('old', window.entries.length, window.entries[0]);
+#+end_src
+
+#+NAME: milestone-after-month-set
+#+begin_src js :spookfox t :results silent :noweb yes
+<<milestone-params>>
+document.querySelector('#options_end_date').value = endOfMonth;
+document.querySelector('form[phx-change="update_options"]').dispatchEvent(new Event('submit', {bubbles: true, cancelable:true}))
+#+end_src
+
+#+NAME: milestone-after-month-get
+#+begin_src js :spookfox t :results silent :noweb yes
+<<milestone-params>>
+if (typeof window.entries != 'undefined') {
+  window.oldEntries = window.entries;
+}
+window.entries = [];
+[...document.querySelectorAll('#leaderboard tbody tr')].forEach(o => {
+  const td = o.querySelectorAll('td');
+  window.entries.push({ name: td[0].textContent.trim(), campaigns: parseInt(td[1].textContent.trim()), deliveries: parseInt(td[2].textContent.trim()) });
+});
+console.log('new', window.entries);
+#+end_src
+
+#+NAME: milestone-summary
+#+begin_src js :spookfox t :noweb yes :results value
+thresholds = {};
+specialThresholds = [1, 5, 10, 25, 50];
+function formatName(s) {
+  const parts = s.split(/ /);
+  return parts[0] + ' ' + parts.slice(1).map(o => o[0] + '.').join(' ');
+}
+window.entries.forEach(o => {
+	if (o.name.match(/^Anonymous/)) return;
+	const previous = window.oldEntries.find(p => o.name == p.name) || {name: o.name, campaigns: 0, deliveries: 0};
+	let threshold = null;
+	if (Math.floor(previous.deliveries / 100) != Math.floor(o.deliveries / 100)) {
+		threshold = Math.floor(o.deliveries / 100) * 100;
+	}
+	else {
+		for (let t of specialThresholds) {
+			if (previous.deliveries < t && o.deliveries >= t) {
+				threshold = t;
+				break;
+			}
+		}
+	}
+	if (threshold && o.name) {
+		if (!thresholds[threshold]) {
+			thresholds[threshold] = [];
+		}
+		thresholds[threshold].push(formatName(o.name));
+	}
+});
+list = Object.entries(thresholds).sort((a, b) => parseInt(a[0]) < parseInt(b[0]) ? -1 : 1).map(o => o[0] + ': ' + o[1].join(', ')).join("\n");
+
+window.result = window.thisMonthSummary + "\n\n" + list;
+console.log(window.result);
+window.result
+#+end_src
+

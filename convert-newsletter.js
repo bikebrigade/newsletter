@@ -347,7 +347,7 @@ async function downloadNewsletterByFile(fileId, tempDir) {
 
 async function downloadLatestNewsletter() {
   const file = await getLatestNewsletterSketchpad();
-  console.log(`Downloading ${file.name} (${file.id})`);
+  console.log(`Downloading ${file.name}...`);
   const res = await downloadNewsletterByFile(file.id, TEMP_DIR);
 }
 
