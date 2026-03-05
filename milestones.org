@@ -14,6 +14,32 @@ window.endOfMonth = '2026-02-28';
 window.dayBeforeMonth = '2026-01-31';
 #+end_src
 
+Let's try to do it all in one block:
+
+#+begin_src emacs-lisp :eval never-export :results silent
+(let (result)
+  (dolist (block-name '("milestone-this-month-set"
+                        "milestone-this-month-get"
+                        "milestone-before-month-set"
+                        "milestone-before-month-get"
+                        "milestone-after-month-set"
+                        "milestone-after-month-get"
+                        "milestone-summary"))
+    (setq result
+           (org-babel-execute-src-block
+            nil
+            (org-babel-lob--src-info block-name)
+            nil 'babel-call))
+    (when (string-match "-set" block-name)
+      (message "Waiting after %s..." block-name)
+      (sit-for 3)))
+  (kill-new result)
+  (message "Copied."))
+#+end_src
+
+Step by step if desired:
+
+
 #+CALL: milestone-this-month-set()
 #+CALL: milestone-this-month-get()
 #+CALL: milestone-before-month-set()
