@@ -741,7 +741,7 @@ function myBrigadeTocItems($, nodes) {
         label = `${match[2]}: ${sectionName}`;
       }
     }
-
+    console.log(label);
     const escapedLabel = label
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -877,7 +877,10 @@ async function myBrigadeProcessNewsletter(htmlFile, date = new Date(getNextNewsl
   }
 
   if (sections["Other updates"]) {
-    html += `<table><tbody><tr><td style="padding: 12px 24px 12px 24px"><h2>Other updates</h2><ul>${$(sections["Other updates"]).html()}</ul></td></tr></tbody></table>`;
+    let text = $(sections["Other updates"]).text().trim();
+    if (text != 'null' && text != '') {
+      html += `<table><tbody><tr><td style="padding: 12px 24px 12px 24px"><h2>Other updates</h2><ul>${$(sections["Other updates"]).html()}</ul></td></tr></tbody></table>`;
+    }
   }
 
   html += `</td></tr></tbody></table>`;
@@ -1013,26 +1016,49 @@ async function updateCampaignHTML(campaign, output) {
   return mailchimpRequest(`/campaigns/${campaign.id}/content`);
 }
 
-async function myBrigadeSendTest() {
+async function myBrigadeCheckTest(input) {
+  console.log(await getEmails(input));
+}
+
+async function getEmails(input) {
   const emailList = JSON.parse(fs.readFileSync('emails.json'));
-  const campaign = await nextCampaign();
-  if (!campaign) return;
-  const rawHtml = fs.readFileSync(getHTMLFilename(TEMP_DIR));
-  const $ = cheerio.load(rawHtml, { decodeEntities: true });
-  const sectionsRaw = myHtmlGroupByTag($, $('body').children(), 'h1');
-  const meta = sectionsRaw.find(o => o.section == 'Meta');
-  let emails = emailList['default'];
-  for (let row of Object.entries(emailList)) {
-    if (row[0] == 'default') continue;
-    const match = meta.children.find((o) => {
-      return $(o).html().match(row[0]);
-    });
-    if (match) {
-      emails = emails.concat(row[1]);
-      break;
+  let emails = [];
+  if (input && input.length > 0) {
+    for (let i = 0; i < input.length; i++) {
+      if (input[i].indexOf('@') < 0) {
+        let match = Object.entries(emailList)
+            .find((o) => o[0].toLowerCase() == input[i].toLowerCase());
+        if (match) {
+          emails = emails.concat(match[1]);
+        }
+      } else {
+        emails.push(input[i]);
+      }
+    }
+  } else {
+    const rawHtml = fs.readFileSync(getHTMLFilename(TEMP_DIR));
+    const $ = cheerio.load(rawHtml, { decodeEntities: true });
+    const sectionsRaw = myHtmlGroupByTag($, $('body').children(), 'h1');
+    const meta = sectionsRaw.find(o => o.section == 'Meta');
+    emails = emails.concat(emailList['default']);
+    for (let row of Object.entries(emailList)) {
+      if (row[0] == 'default') continue;
+      const match = meta.children.find((o) => {
+        return $(o).html().match(row[0]);
+      });
+      if (match) {
+        emails = emails.concat(row[1]);
+      }
     }
   }
-  const res = await mailchimpRequest(`/campaigns/${campaign.id}/actions/test`, 'POST', {
+  return emails;
+}
+
+async function myBrigadeSendTest(input) {
+  let emails = await getEmails(input);
+  const campaign = await nextCampaign();
+  if (!campaign) return null;
+  await mailchimpRequest(`/campaigns/${campaign.id}/actions/test`, 'POST', {
     test_emails: emails,
     send_type: 'html'
   });
@@ -1059,8 +1085,10 @@ async function main() {
     await processNewsletterHTML(await nextCampaign());
   } else if (process.argv[2] == 'schedule') {
     await myBrigadeSchedule();
+  } else if (process.argv[2] == 'check-test') {
+    await myBrigadeCheckTest(process.argv.slice(3));
   } else if (process.argv[2] == 'test') {
-    await myBrigadeSendTest();
+    await myBrigadeSendTest(process.argv.slice(3));
   } else {
     await myBrigadeCreateOrUpdateCampaign();
   }
