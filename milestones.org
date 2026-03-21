@@ -1,4 +1,25 @@
-* Milestone extraction
+* Weekly milestones
+
+https://dispatch.bikebrigade.ca/analytics/
+
+#+begin_src emacs-lisp
+(let ((numbers (spookfox-eval-js-in-active-tab "[...document.querySelectorAll('.number')].map((o) => parseInt(o.getAttribute('data-unformatted')))" t))
+      (dates (spookfox-eval-js-in-active-tab "[...document.querySelectorAll('.DateInput input')].map((o) => o.getAttribute('value'))" t)))
+  (write-region (json-encode
+                 `((start . ,(elt dates 0))
+                   (end . ,(elt dates 1))
+                   (km . ,(elt numbers 0))
+                   (riders . ,(elt numbers 1))
+                   (deliveries . ,(elt numbers 2))
+                   (recipients . ,(elt numbers 3))))
+                nil "numbers.json"))
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+* Monthly milestones
      :PROPERTIES:
      :ID:       20251002T091357.892055
      :END:
@@ -151,4 +172,3 @@ window.result = window.thisMonthSummary + "\n\n" + list;
 console.log(window.result);
 window.result
 #+end_src
-

@@ -22,6 +22,16 @@ const BRIGADE_NEWSLETTER_IMG_DIR = process.env.IMAGE_ARCHIVE;
 
 const nextDate = getNextNewsletterDate();
 
+let stats = null;
+try {
+  stats = JSON.parse(fs.readFileSync('numbers.json'));
+  const daysSince = (new Date() - new Date(stats.end)) / (1000 * 60 * 60 * 24);
+  if (daysSince > 7) {
+    console.error('Stats are out of date, skipping');
+    stats = null;
+  }
+} catch (err) { console.log("Can't load stats."); }
+
 function getNextNewsletterDate() {
   const today = new Date();
   const todayDayOfWeek = today.getDay();
@@ -392,8 +402,12 @@ function makeBrigadeSignupBlock(inputDate = new Date()) {
   const nextISO = formatDate(nextWeek, 'ISO');
   const curRange = getRangeStr(currentWeek, currentWeekEnd).toUpperCase();
   const nextRange = getRangeStr(nextWeek, nextWeekEnd);
+  let thanks = '';
+  if (stats) {
+    thanks = `<p style="text-align: center; font-family: 'Helvetica Neue', Helvetica, Arial, Verdana; margin-top: 12px; margin-bottom: 12px;">Last week, ${stats.riders} riders made ${stats.deliveries} deliveries. Thank you!</p>`;
+  }
   return `<table class="sign-up" style="background-color: #223f4d; text-align: center; margin: auto; margin-top: 24px; margin-bottom: 12px;"><tbody><tr><td><a href="https://dispatch.bikebrigade.ca/campaigns/signup?current_week=${curISO}" target="_blank" class="sign-up mceButtonLink" style="background-color:#223f4d;border-radius:0;border:2px solid #223f4d;color:#ffffff;display:block;font-family:'Helvetica Neue', Helvetica, Arial, Verdana, sans-serif;font-size:16px;font-weight:normal;font-style:normal;padding:16px 28px;text-decoration:none;text-align:center;direction:ltr;letter-spacing:0px" rel="noreferrer">SIGN UP NOW TO DELIVER ${curRange}</a></td></tr></table>
-<p style="text-align: center; font-family: 'Helvetica Neue', Helvetica, Arial, Verdana"><a href="https://dispatch.bikebrigade.ca/campaigns/signup?current_week=${nextISO}" style="color: #476584; margin-top: 12px; margin-bottom: 12px;" target="_blank">You can also sign up early to deliver ${nextRange}</a></p>`;
+<p style="text-align: center; font-family: 'Helvetica Neue', Helvetica, Arial, Verdana"><a href="https://dispatch.bikebrigade.ca/campaigns/signup?current_week=${nextISO}" style="color: #476584; margin-top: 12px; margin-bottom: 12px;" target="_blank">You can also sign up early to deliver ${nextRange}</a></p>${thanks}`;
 }
 
 function slugify(s) {
