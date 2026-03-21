@@ -151,6 +151,7 @@ async function processAndFixImages(tempDir) {
       if (file !== outputFileName) {
         fs.unlinkSync(inputPath);
       }
+      console.log(`resized ${outputPath}`);
     } catch (err) {
       console.error(`Failed processing ${file}:`, err.message);
     }
@@ -418,7 +419,9 @@ function saveImages($, dir, filePrefix = "", transformFn = null) {
       if (!data.startsWith('data:')) {
         const ext = path.extname(data);
         const jpgPath = data.replace(new RegExp(`\\${ext}$`), '.jpg');
-        if (fs.existsSync(jpgPath)) {
+        const exists = fs.existsSync(path.join(TEMP_DIR, data.replace(new RegExp(`\\${ext}$`), '.jpg')));
+        console.log(`${exists} Looking for ${jpgPath}`);
+        if (exists) {
           node.attr('src', jpgPath);
           data = jpgPath;
         }
@@ -437,7 +440,7 @@ function saveImages($, dir, filePrefix = "", transformFn = null) {
           try {
             execSync(`convert "${lastImageFilename}" "${extraFilename}"`);
           } catch (e) {
-            fs.copyFileSync(lastImageFilename, extraFilename);
+            fs.copyFileSync(path.join(TEMP_DIR, lastImageFilename), extraFilename);
           }
         }
 
@@ -491,7 +494,7 @@ function saveImages($, dir, filePrefix = "", transformFn = null) {
         } else if (lastImageFilename) {
           const ext = path.extname(lastImageFilename);
           finalFilename = path.join(dir, `${filePrefix}${slug}${ext}`);
-          fs.copyFileSync(lastImageFilename, finalFilename);
+          fs.copyFileSync(path.join(TEMP_DIR, lastImageFilename), finalFilename);
         }
 
         results.unshift({
