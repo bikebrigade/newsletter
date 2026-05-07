@@ -2,7 +2,30 @@
 
 https://dispatch.bikebrigade.ca/analytics/
 
+
 #+begin_src emacs-lisp
+(spookfox-eval-js-in-active-tab "[...document.querySelectorAll('.DateInput input')].map((o) => {
+let input = o;
+let oldValue = o.value;
+o.value = '04/27/2026';
+// This tricks React's internal value tracker
+let event = new Event('input', { bubbles: true });
+let tracker = input._valueTracker;
+if (tracker) {
+  tracker.setValue(lastValue);
+}
+input.dispatchEvent(event);
+o.value = oldValue;
+// This tricks React's internal value tracker
+event = new Event('input', { bubbles: true });
+tracker = input._valueTracker;
+if (tracker) {
+  tracker.setValue(lastValue);
+}
+
+input.dispatchEvent(event);
+})" t)
+
 (let ((numbers (spookfox-eval-js-in-active-tab "[...document.querySelectorAll('.number')].map((o) => parseInt(o.getAttribute('data-unformatted')))" t))
       (dates (spookfox-eval-js-in-active-tab "[...document.querySelectorAll('.DateInput input')].map((o) => o.getAttribute('value'))" t)))
   (write-region (json-encode
@@ -12,11 +35,102 @@ https://dispatch.bikebrigade.ca/analytics/
                    (riders . ,(elt numbers 1))
                    (deliveries . ,(elt numbers 2))
                    (recipients . ,(elt numbers 3))))
-                nil "numbers.json"))
+                nil "numbers.json")
+  numbers)
 #+end_src
 
 #+RESULTS:
 :results:
+[258 41 150 116]
+:end:
+** Doublechecking the range
+#+begin_src emacs-lisp :results table
+(append
+ (list (list "Start" "End" "KM" "Riders" "Deliveries" "Recipients"))
+ (let ((start (date-to-time "2026-03-23")))
+   (cl-loop
+    for num-days from 5 to 8
+    nconc
+    (cl-loop
+     for day from -8 to 2
+     collect
+     (let ((start-date (format-time-string "%m/%d/%Y"
+                                           (time-add start (days-to-time day))))
+           (end-date (format-time-string "%m/%d/%Y"
+                                         (time-add start
+                                                   (days-to-time (+ day
+                                                                    num-days)))))
+           numbers)
+       (spookfox-eval-js-in-active-tab
+        (format
+         "document.querySelector('input[placeholder=\"Start Date\"]').value = '%s'; document.querySelector('input[placeholder=\"Start Date\"]').dispatchEvent(new Event('change', {bubbles:true, cancelable:true}))"
+         start-date)
+        t)
+       (spookfox-eval-js-in-active-tab
+        (format
+         "document.querySelector('input[placeholder=\"End Date\"]').value = '%s'; document.querySelector('input[placeholder=\"End Date\"]').dispatchEvent(new Event('change', {bubbles:true, cancelable:true}))"
+         end-date)
+        t)
+       (spookfox-eval-js-in-active-tab
+        (format
+         "document.querySelector('input[placeholder=\"End Date\"]').value = '%s'; document.querySelector('input[placeholder=\"End Date\"]').dispatchEvent(new Event('change', {bubbles:true, cancelable:true}))"
+         end-date)
+        t)
+       (sit-for 2)
+       (setq numbers
+             (seq-into
+              (spookfox-eval-js-in-active-tab "[...document.querySelectorAll('.number')].map((o) => o.getAttribute('data-unformatted'))" t)
+              'list))
+       (append (list start-date end-date) numbers))))))
+#+end_src
+
+#+RESULTS:
+:results:
+| Start      | End        |    KM | Riders | Deliveries | Recipients |
+| 03/15/2026 | 03/20/2026 | 164.2 |     31 |        126 |        104 |
+| 03/16/2026 | 03/21/2026 | 190.3 |     32 |        145 |        119 |
+| 03/17/2026 | 03/22/2026 | 204.1 |     33 |        135 |        114 |
+| 03/18/2026 | 03/23/2026 | 174.3 |     33 |        117 |         96 |
+| 03/19/2026 | 03/24/2026 | 125.3 |     30 |        101 |         78 |
+| 03/20/2026 | 03/25/2026 |   140 |     28 |         98 |         79 |
+| 03/21/2026 | 03/26/2026 | 162.1 |     33 |        105 |         91 |
+| 03/22/2026 | 03/27/2026 | 175.1 |     32 |        129 |        105 |
+| 03/23/2026 | 03/28/2026 | 215.2 |     34 |        150 |        121 |
+| 03/24/2026 | 03/29/2026 | 227.4 |     34 |        139 |        115 |
+| 03/25/2026 | 03/30/2026 | 192.9 |     33 |        120 |         98 |
+| 03/15/2026 | 03/21/2026 | 205.4 |     36 |        156 |        125 |
+| 03/16/2026 | 03/22/2026 | 215.8 |     37 |        154 |        126 |
+| 03/17/2026 | 03/23/2026 | 217.3 |     35 |        145 |        120 |
+| 03/18/2026 | 03/24/2026 | 186.7 |     37 |        137 |        111 |
+| 03/19/2026 | 03/25/2026 |   173 |     34 |        130 |        100 |
+| 03/20/2026 | 03/26/2026 | 203.3 |     37 |        135 |        111 |
+| 03/21/2026 | 03/27/2026 | 200.6 |     37 |        138 |        111 |
+| 03/22/2026 | 03/28/2026 | 228.4 |     35 |        160 |        127 |
+| 03/23/2026 | 03/29/2026 | 239.8 |     38 |        159 |        128 |
+| 03/24/2026 | 03/30/2026 | 240.6 |     36 |        149 |        121 |
+| 03/25/2026 | 03/31/2026 | 204.4 |     36 |        136 |        110 |
+| 03/15/2026 | 03/22/2026 | 230.9 |     40 |        165 |        132 |
+| 03/16/2026 | 03/23/2026 |   229 |     39 |        164 |        132 |
+| 03/17/2026 | 03/24/2026 | 229.7 |     39 |        165 |        133 |
+| 03/18/2026 | 03/25/2026 | 234.4 |     40 |        166 |        132 |
+| 03/19/2026 | 03/26/2026 | 236.3 |     42 |        167 |        132 |
+| 03/20/2026 | 03/27/2026 | 241.8 |     41 |        168 |        131 |
+| 03/21/2026 | 03/28/2026 |   254 |     40 |        169 |        132 |
+| 03/22/2026 | 03/29/2026 |   253 |     39 |        169 |        134 |
+| 03/23/2026 | 03/30/2026 |   253 |     40 |        169 |        134 |
+| 03/24/2026 | 03/31/2026 |   253 |     40 |        169 |        134 |
+| 03/25/2026 | 04/01/2026 | 242.1 |     37 |        160 |        128 |
+| 03/15/2026 | 03/23/2026 | 244.1 |     42 |        175 |        132 |
+| 03/16/2026 | 03/24/2026 | 241.5 |     39 |        184 |        133 |
+| 03/17/2026 | 03/25/2026 |   277 |     41 |        194 |        135 |
+| 03/18/2026 | 03/26/2026 |   298 |     43 |        203 |        140 |
+| 03/19/2026 | 03/27/2026 |   275 |     43 |        200 |        132 |
+| 03/20/2026 | 03/28/2026 |   295 |     42 |        199 |        132 |
+| 03/21/2026 | 03/29/2026 |   279 |     42 |        178 |        136 |
+| 03/22/2026 | 03/30/2026 |   266 |     41 |        179 |        134 |
+| 03/23/2026 | 03/31/2026 |   265 |     40 |        185 |        134 |
+| 03/24/2026 | 04/01/2026 |   290 |     40 |        189 |        131 |
+| 03/25/2026 | 04/02/2026 |   311 |     40 |        200 |        136 |
 :end:
 
 * Monthly milestones
@@ -30,9 +144,9 @@ https://dispatch.bikebrigade.ca/leaderboard
 
 #+NAME: milestone-params
 #+begin_src js  :spookfox t :results silent
-window.startOfMonth = '2026-02-01';
-window.endOfMonth = '2026-02-28';
-window.dayBeforeMonth = '2026-01-31';
+window.startOfMonth = '2026-03-01';
+window.endOfMonth = '2026-03-31';
+window.dayBeforeMonth = '2026-02-28';
 #+end_src
 
 Let's try to do it all in one block:
@@ -57,6 +171,19 @@ Let's try to do it all in one block:
   (kill-new result)
   (message "Copied."))
 #+end_src
+
+#+RESULTS:
+:results:
+62 riders made 713 deliveries.
+
+1: Connie D.
+5: Nicki I., Emily R.
+25: Ruth-Anne S., Dale H.
+50: Andrew W.
+900: Anne F.
+2200: Brad W.
+7900: Chad M.
+:end:
 
 Step by step if desired:
 
