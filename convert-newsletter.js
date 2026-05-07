@@ -1106,6 +1106,22 @@ async function main() {
     await myBrigadeCheckTest(process.argv.slice(3));
   } else if (process.argv[2] == 'test') {
     await myBrigadeSendTest(process.argv.slice(3));
+	} else if (process.argv[2] == 'help') {
+		console.log(`
+node convert-newsletter.js COMMAND
+
+commands: (update is run by default)
+
+download
+resize
+update
+from-zip
+format
+schedule
+check-test: lists who the test e-mails will go to
+test [email email email]: send e-mails
+help
+`);
   } else {
     await myBrigadeCreateOrUpdateCampaign();
   }
